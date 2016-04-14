@@ -20,6 +20,9 @@ namespace PhotographyWebsitesScrapper
             InitializeComponent();
         }
 
+        WebBrowser GoodRequest = new WebBrowser();
+        String GoodRequestData;
+
         Regex reg = new Regex(@"\w+([-+.]\w+)*@\w+([-.]\w+)*\.\w+([-.]\w+)*", RegexOptions.IgnoreCase);
         List<string> EmailAds = new List<string>();
         List<string> EmailList = new List<string>();
@@ -46,16 +49,36 @@ namespace PhotographyWebsitesScrapper
 
             catch (Exception e)
             {
+                if (e.Message.Contains("Bad"))
+                {
+                
+                    GoodRequest.ScriptErrorsSuppressed = true;
+                    GoodRequest.AllowNavigation = true;
+                    GoodRequest.Navigate(RequestURL);
+                    while (GoodRequest.ReadyState != WebBrowserReadyState.Complete)
+                    {
+                        Application.DoEvents();
+                    }
+
+                    return GoodRequest.Document.Body.InnerHtml;
+
+
+                }
+
+                else { 
 
                 return e.Message;
+                }
             }
 
 
         }
 
+   
         public WebBrowser BrowserFunction (string HTMLContent)
         {
- 
+
+            try {  
             WebBrowser SubBrowser = new WebBrowser();
             SubBrowser.ScriptErrorsSuppressed = true;
             SubBrowser.DocumentText = "0";
@@ -63,6 +86,11 @@ namespace PhotographyWebsitesScrapper
             SubBrowser.Document.Write(HTMLContent);
             SubBrowser.Refresh();
             return SubBrowser;
+            }
+            catch (Exception e)
+            {
+                return null;
+            }
 
         }
 
@@ -99,12 +127,24 @@ namespace PhotographyWebsitesScrapper
                         if (alink.InnerHtml != null && alink.GetAttribute("href") != null) { 
                         if(alink.InnerHtml.Contains("contact") || alink.GetAttribute("href").Contains("contact"))
                         {
+                                string SubPageUrl;
                             var a = HomeUrl;
                             string b = alink.GetAttribute("href");
-                            var c = b.Substring(6, b.Length - 6);
-                            string SubPageUrl = a + c;
+                                if (b.Contains("about")) { 
+                             var c = b.Substring(6, b.Length - 6);
+                                    if (c.Contains("blank"))
+                                    {
+                                        c = c.Substring(7, c.Length - 7);
+                                    }
 
-                            string AboutPageContent = GetRequestString(SubPageUrl);
+                                SubPageUrl = a + c;
+                                }
+                                else
+                                {
+                                    SubPageUrl = b;
+                                }
+
+                                string AboutPageContent = GetRequestString(SubPageUrl);
                            
                             MatchCollection Gold2 = reg.Matches(HomePageContent);
 
@@ -131,7 +171,21 @@ namespace PhotographyWebsitesScrapper
 
 
             }
-            
+
+            using (StreamWriter theWriter = new StreamWriter(Application.StartupPath + "\\WebSiteTestEmails.csv"))
+            {
+
+                foreach (string name in EmailList)
+                {
+                    theWriter.WriteLine(name);
+                }
+
+
+
+            }
+
+
+
         }
     }
 }
